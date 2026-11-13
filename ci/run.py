@@ -128,7 +128,7 @@ def android():
             with (OUT / f'Android-ES-{version}.png').open('wb') as image:
                 subprocess.run(['adb', 'exec-out', 'screencap', '-p'], stdout=image, check=False)
     finally:
-        subprocess.run(['adb', 'shell', 'setprop', 'debug.of.gles', ''], check=False)
+        subprocess.run(['adb', 'shell', "setprop debug.of.gles ''"], check=False)
         subprocess.run(['adb', 'shell', 'am', 'force-stop', package], check=False)
     if not any(case['status'] != 'SKIP' for case in cases):
         raise RuntimeError('Emulator provided no usable GLES versions')

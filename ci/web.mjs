@@ -27,7 +27,7 @@ try {
   const webroot = join(root, 'glMatrixWeb/bin/em/glMatrixWeb');
   const html = readdirSync(webroot).find((file) => file.endsWith('.html'));
   if (!html) throw new Error(`No built HTML in ${webroot}`);
-  const server = spawn('python3', ['-m', 'http.server', '8765', '--bind', '127.0.0.1', '--directory', webroot], { stdio: 'ignore' });
+  const server = spawn('python3', [join(root, 'ci/serve.py'), webroot], { stdio: 'ignore' });
   children.push(server);
   server.on('error', (error) => logs.push(String(error)));
   const chrome = spawn(browser, [

@@ -40,7 +40,7 @@ jobs:
       matrix:
         include:
           - {name: Linux GL 2.1 / 3.2 / 3.3 / 4.1, runner: ubuntu-24.04, platform: linux}
-          - {name: macOS GL 2.1 / 3.2 / 3.3 / 4.1, runner: macos-26, platform: macos}
+          - {name: macOS app build, runner: macos-26, platform: macos}
           - {name: WebGL 1, runner: ubuntu-24.04, platform: web, webgl: '1'}
           - {name: WebGL 2, runner: ubuntu-24.04, platform: web, webgl: '2'}
           - {name: iOS ES 1.1 / 2.0 / 3.0, runner: macos-26, platform: ios}
@@ -87,13 +87,14 @@ jobs:
           echo "$OF_SHA" > artifacts/openFrameworks-sha.txt
           bash ci/build.sh 2>&1 | tee artifacts/build.log
       - name: Run desktop GL cases
-        if: matrix.platform == 'linux' || matrix.platform == 'macos'
+        if: matrix.platform == 'linux'
         run: |
-          if [[ "$CI_PLATFORM" == linux ]]; then
-            LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x1024x24' python3 ci/run.py desktop
-          else
-            python3 ci/run.py desktop
-          fi
+          LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x1024x24' python3 ci/run.py desktop
+      - name: Record macOS build coverage
+        if: matrix.platform == 'macos'
+        run: |
+          echo '### macOS: build only' >> "$GITHUB_STEP_SUMMARY"
+          echo 'The hosted macOS VM has no usable OpenGL pixel format. Runtime GL 2.1/3.2/3.3/4.1 checks require a Mac with OpenGL support; run python3 ci/run.py desktop there.' >> "$GITHUB_STEP_SUMMARY"
       - name: Run WebGL in headless Chrome
         if: matrix.platform == 'web'
         run: node ci/web.mjs

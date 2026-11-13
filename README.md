@@ -117,8 +117,8 @@ in the job summary and artifacts.
 | Job | Coverage |
 | --- | --- |
 | Linux desktop | GL 2.1, 3.2, 3.3, 4.1; Mesa software rendering under Xvfb |
-| macOS desktop | GL 2.1, 3.2, 3.3, 4.1 on the hosted runner |
-| WebGL 1 / WebGL 2 | Separate builds and headless Chrome runs using SwiftShader |
+| macOS desktop | Build only; hosted VM cannot create an OpenGL context |
+| WebGL 1 / WebGL 2 | Separate headless Chrome runs using SwiftShader; WebGL 1 forces browser fallback |
 | iOS | Simulator runs for ES 1.1, 2.0, 3.0 |
 | Android arm64 | Build and package an arm64 APK |
 | Android x86_64 | Emulator runs for ES 1.1, 2.0, 3.0, 3.1, 3.2 where advertised |
@@ -129,6 +129,17 @@ the job. Android versions above the emulator's advertised GLES maximum are
 explicitly reported as **SKIP**, with capable-device testing still required;
 skips are never counted as passes. Emulator/software-renderer checks do not
 replace testing on physical GPUs.
+
+The WebGL 1 job uses a WebGL 2-capable binary with WebGL 2 disabled in Chrome,
+as documented by the app, and verifies that the actual context is WebGL 1.
+Upstream currently references ES3 framebuffer symbols even when built with its
+`OF_WEBGL_VERSION=1` flag, so a WebGL-1-only link fails. CI does not patch OF to
+work around that separate build issue. The CI HTTP server supplies COOP/COEP
+headers required by upstream's Emscripten pthreads build.
+
+On a Mac with OpenGL support, `python3 ci/run.py desktop` runs all four desktop
+versions after building the app. The hosted macOS job reports build coverage
+explicitly instead of treating its missing graphics device as a rendering pass.
 
 Build logs, runtime logs, screenshots, result JSON, and APKs are uploaded as
 short-lived Actions artifacts and stay out of git. `Graphics result` is the

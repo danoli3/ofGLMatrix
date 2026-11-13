@@ -3,6 +3,7 @@ set -euo pipefail
 
 : "${OF_ROOT:?}" "${APP_ROOT:?}" "${CI_PLATFORM:?}"
 jobs=${NUM_CORES:-2}
+python3 -m unittest discover -s "$APP_ROOT/ci" -p 'test_*.py'
 cd "$OF_ROOT"
 
 case "$CI_PLATFORM" in
@@ -23,15 +24,16 @@ case "$CI_PLATFORM" in
     [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
     docker run --rm -v "$OF_ROOT:/src" -w /src \
       "emscripten/emsdk:$version" bash -euc '
-        emmake make -C apps/ofGLMatrix/glMatrixWeb -j2 Release \
-          PROJECT_DEFINES="OF_WEBGL_VERSION=$1"
-      ' bash "$WEBGL"
+        # OF master references ES3 FBO symbols even on its WebGL1 path.
+        # Link a WebGL2-capable binary, then force WebGL1 in the browser.
+        emmake make -C apps/ofGLMatrix/glMatrixWeb -j2 Release
+      '
     ;;
   ios)
     bash scripts/macos/download_libs.sh -t latest
     xcodebuild -project "$APP_ROOT/glMatrixIOS/glRenderSmokeTest.xcodeproj" \
       -scheme glRenderSmokeTest -configuration Release -sdk iphonesimulator \
-      -destination 'generic/platform=iOS Simulator' -arch "$(uname -m)" \
+      -destination 'generic/platform=iOS Simulator' ARCHS="$(uname -m)" \
       CODE_SIGNING_ALLOWED=NO \
       CONFIGURATION_BUILD_DIR="$APP_ROOT/artifacts/ios-app" build
     ;;
