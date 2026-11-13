@@ -1,0 +1,5 @@
+include ':ofApp'
+def openFrameworksProjectPath = '../../../libs/openFrameworksCompiled/project/android'
+def openFrameworksProjectAbsolutePath = new File(rootDir, openFrameworksProjectPath).absolutePath
+include ':openFrameworksProject'
+project(':openFrameworksProject').projectDir = new File(openFrameworksProjectAbsolutePath)

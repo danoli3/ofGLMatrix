@@ -1,0 +1,32 @@
+# Generated builds and test output
+**/bin/
+**/obj/
+**/build/
+**/apks/
+**/.cxx/
+**/.gradle/
+*.log
+*.status
+*.apk
+*.aab
+*.app/
+*.o
+*.a
+*.so
+*.dylib
+*.wasm
+*.dSYM/
+shots/
+stack/
+variants/
+
+# Local SDK, signing, and editor settings
+local.properties
+App.xcconfig
+*.keystore
+*.jks
+.idea/
+.vscode/
+.DS_Store
+xcuserdata/
+*.xcuserstate
