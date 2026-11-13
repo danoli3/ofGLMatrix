@@ -30,3 +30,7 @@ App.xcconfig
 .DS_Store
 xcuserdata/
 *.xcuserstate
+
+# CI diagnostics are uploaded as Actions artifacts, never committed
+/artifacts/
+__pycache__/

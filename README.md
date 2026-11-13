@@ -105,3 +105,34 @@ Set `JAVA_HOME` and `ANDROID_HOME` for your machine as needed.
 
 Generated builds, logs, captures, SDK paths, and local signing settings are
 excluded from version control.
+
+## Continuous integration
+
+[Graphics against OF master](../../actions/workflows/graphics.yml) runs on pushes,
+pull requests, manual dispatch, and weekly. Every matrix job checks out the same
+resolved commit of `openframeworks/openFrameworks` **master**, builds OF from
+source, and uses upstream's dependency downloads. The OF commit SHA is recorded
+in the job summary and artifacts.
+
+| Job | Coverage |
+| --- | --- |
+| Linux desktop | GL 2.1, 3.2, 3.3, 4.1; Mesa software rendering under Xvfb |
+| macOS desktop | GL 2.1, 3.2, 3.3, 4.1 on the hosted runner |
+| WebGL 1 / WebGL 2 | Separate builds and headless Chrome runs using SwiftShader |
+| iOS | Simulator runs for ES 1.1, 2.0, 3.0 |
+| Android arm64 | Build and package an arm64 APK |
+| Android x86_64 | Emulator runs for ES 1.1, 2.0, 3.0, 3.1, 3.2 where advertised |
+
+Each runtime case must produce the matching `GL_MATRIX ... RESULT=PASS`. Crashes,
+timeouts, missing results, lower-version fallbacks, and failed pixel checks fail
+the job. Android versions above the emulator's advertised GLES maximum are
+explicitly reported as **SKIP**, with capable-device testing still required;
+skips are never counted as passes. Emulator/software-renderer checks do not
+replace testing on physical GPUs.
+
+Build logs, runtime logs, screenshots, result JSON, and APKs are uploaded as
+short-lived Actions artifacts and stay out of git. `Graphics result` is the
+aggregate status suitable for branch protection.
+
+For local Android builds, `-PofAbi=x86_64` selects the emulator ABI and
+`-PofNdkVersion=<version>` overrides the NDK pin. The default ABI stays arm64.
