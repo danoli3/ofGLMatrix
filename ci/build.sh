@@ -23,7 +23,7 @@ case "$CI_PLATFORM" in
     [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
     docker run --rm -v "$OF_ROOT:/src" -w /src \
       "emscripten/emsdk:$version" bash -euc '
-        make -C apps/ofGLMatrix/glMatrixWeb -j2 Release \
+        emmake make -C apps/ofGLMatrix/glMatrixWeb -j2 Release \
           PROJECT_DEFINES="OF_WEBGL_VERSION=$1"
       ' bash "$WEBGL"
     ;;
@@ -37,7 +37,8 @@ case "$CI_PLATFORM" in
     ;;
   android)
     : "${ABI:?}" "${NDK:?}"
-    sdkmanager "ndk;$NDK" 'platforms;android-34' 'build-tools;37.0.0' 'cmake;3.22.1'
+    "${ANDROID_HOME:?}/cmdline-tools/latest/bin/sdkmanager" \
+      "ndk;$NDK" 'platforms;android-34' 'build-tools;37.0.0' 'cmake;3.22.1'
     bash scripts/android/download_libs.sh -t latest
     bash libs/openFrameworksCompiled/project/android/cmake.sh "$ABI"
     cd "$APP_ROOT/glMatrixAndroid"
