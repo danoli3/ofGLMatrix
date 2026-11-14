@@ -141,6 +141,17 @@ On a Mac with OpenGL support, `python3 ci/run.py desktop` runs all four desktop
 versions after building the app. The hosted macOS job reports build coverage
 explicitly instead of treating its missing graphics device as a rendering pass.
 
+Each job presents build and runtime status in tables, with one row per API and
+concise failure reasons. The final `Graphics result` job combines the whole
+matrix into a single table; full diagnostics remain collapsed below each job
+summary. Infrastructure errors (such as simulator boot migration timeouts) are
+shown separately from rendering failures, and unexecuted APIs are marked
+`NOT RUN`. Artifact upload/download actions use Node.js 24.
+
+iOS simulator startup begins before compilation so initial data migration can
+run in parallel. The test runner waits up to 15 minutes for boot and saves a
+separate `simulator-boot.log` if startup fails.
+
 Build logs, runtime logs, screenshots, result JSON, and APKs are uploaded as
 short-lived Actions artifacts and stay out of git. `Graphics result` is the
 aggregate status suitable for branch protection.

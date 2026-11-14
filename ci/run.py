@@ -77,16 +77,9 @@ def desktop():
 def ios():
     app = OUT / 'ios-app/glRenderSmokeTest.app'
     bundle = check(['/usr/libexec/PlistBuddy', '-c', 'Print CFBundleIdentifier', str(app / 'Info.plist')])
-    devices = json.loads(check(['xcrun', 'simctl', 'list', 'devices', 'available', '--json']))['devices']
-    phones = [device for runtime, group in devices.items() if '.iOS-' in runtime
-              for device in group if device['name'].startswith('iPhone') and device['isAvailable']]
-    if not phones:
-        raise RuntimeError('No available iPhone simulator')
-    device = phones[0]
+    from simulator import ready
+    device = ready()
     udid = device['udid']
-    if device['state'] != 'Booted':
-        subprocess.run(['xcrun', 'simctl', 'boot', udid], check=True)
-    subprocess.run(['xcrun', 'simctl', 'bootstatus', udid, '-b'], check=True, timeout=300)
     subprocess.run(['xcrun', 'simctl', 'install', udid, str(app)], check=True)
     cases = []
     for value, version in (('1', '1.1'), ('2', '2.0'), ('3', '3.0')):
@@ -140,18 +133,20 @@ def main():
     parser.add_argument('platform', choices=('desktop', 'ios', 'android'))
     args = parser.parse_args()
     OUT.mkdir(exist_ok=True)
+    error = ''
     try:
         cases = globals()[args.platform]()
-    except Exception as error:
-        cases = [dict(case=args.platform, status='FAIL', detail=str(error))]
-    report = dict(platform=args.platform, openFrameworks=os.environ.get('OF_SHA', ''), cases=cases)
+    except Exception as failure:
+        cases = []
+        error = str(failure)
+    report = dict(platform=args.platform, openFrameworks=os.environ.get('OF_SHA', ''), cases=cases, error=error)
     (OUT / 'results.json').write_text(json.dumps(report, indent=2) + '\n')
-    summary = '\n'.join(f"- **{case['status']}** {case['case']}: {case['detail']}" for case in cases)
-    print(summary)
-    if os.environ.get('GITHUB_STEP_SUMMARY'):
-        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream:
-            stream.write(f'### {args.platform}\n\n{summary}\n')
-    return int(any(case['status'] == 'FAIL' for case in cases))
+    for case in cases:
+        print(f"{case['status']} {case['case']}: {case['detail']}")
+    if error:
+        print(f'Infrastructure error: {error}')
+    return int(bool(error) or any(case['status'] == 'FAIL' for case in cases))
+
 
 
 if __name__ == '__main__':

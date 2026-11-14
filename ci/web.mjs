@@ -15,6 +15,7 @@ const logs = [];
 const children = [];
 let ws;
 let exitCode = 1;
+let report = { cases: [], error: 'Browser test did not complete.' };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const deadline = setTimeout(() => {
   logs.push('CI timeout');
@@ -96,19 +97,17 @@ try {
   writeFileSync(join(out, 'webgl.png'), Buffer.from(shot.data, 'base64'));
   const expected = webgl === '1' ? 'ES 2.0' : 'ES 3.0';
   const pass = title.includes(`requested="${expected}"`) && title.includes(' RESULT=PASS') && context?.webgl === Number(webgl);
-  const report = { openFrameworks: process.env.OF_SHA, webgl, context, status: pass ? 'PASS' : 'FAIL', result: title };
-  writeFileSync(join(out, 'results.json'), JSON.stringify(report, null, 2) + '\n');
+  report = { openFrameworks: process.env.OF_SHA, webgl, context, error: '',
+    cases: [{ case: `WebGL ${webgl}`, status: pass ? 'PASS' : 'FAIL', detail: title || 'No app result' }] };
   console.log(report);
   logs.push(JSON.stringify(report));
-  if (process.env.GITHUB_STEP_SUMMARY) {
-    const { appendFileSync } = await import('node:fs');
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### WebGL ${webgl}: ${report.status}\n\n${title || 'No app result'}\n\nContext: ${JSON.stringify(context)}\n`);
-  }
   exitCode = pass ? 0 : 1;
 } catch (error) {
+  report.error = String(error.message || error);
   logs.push(String(error.stack || error));
   console.error(error);
 } finally {
+  writeFileSync(join(out, 'results.json'), JSON.stringify(report, null, 2) + '\n');
   clearTimeout(deadline);
   ws?.close();
   for (const child of children) child.kill('SIGTERM');
