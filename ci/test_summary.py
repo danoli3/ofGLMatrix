@@ -4,6 +4,25 @@ from simulator import select_device
 
 
 class Summaries(unittest.TestCase):
+    def test_skipped_subchecks_remain_visible_and_do_not_hide_gl_errors(self):
+        for status, gl_status in [('PASS', 'PASS'), ('FAIL', 'FAIL')]:
+            with self.subTest(status=status):
+                detail = ('GL_MATRIX requested="ES 1.1" got="OpenGL ES-CM 1.1 (Driver)" '
+                          f'RESULT={status} [texture upload/draw/readback=SKIP] '
+                          f'[tess2 star (index type + pixels)=SKIP] [no GL errors={gl_status}] '
+                          'SKIP_REASON="OF disables FBOs on Android ES 1.1 emulators."')
+                report = make_report('Android', 'android', 'success',
+                                     'success' if status == 'PASS' else 'failure',
+                                     dict(cases=[dict(case='ES 1.1', status=status, detail=detail)]), abi='x86_64')
+                visible = job_markdown(report).split('<details>')[0]
+                self.assertEqual(runtime_status(report), status)
+                self.assertIn('Skipped checks: texture upload/draw/readback; tess2 star', visible)
+                self.assertIn('OF disables FBOs on Android ES 1.1 emulators.', visible)
+                if status == 'FAIL':
+                    self.assertIn('Failed checks: no GL errors', visible)
+                else:
+                    self.assertIn('All applicable rendering checks passed.', visible)
+
     def test_rendering_failure_lists_failed_checks_without_log_dump(self):
         detail = 'GL_MATRIX requested="ES 1.1" got="OpenGL ES-CM 1.1 (Driver)" RESULT=FAIL [texture upload/draw/readback=FAIL] [screen readback (graphicsExample)=PASS] [tess2 star (index type + pixels)=FAIL]'
         report = make_report('Android', 'android', 'success', 'failure',

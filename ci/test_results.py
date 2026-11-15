@@ -21,6 +21,13 @@ class Results(unittest.TestCase):
         self.assertEqual(result_line('GL_SMOKE_TEST RESULT=PASS\nW/GLMATRIX: GL_MATRIX requested="ES 3.0" RESULT=FAIL'),
                          'W/GLMATRIX: GL_MATRIX requested="ES 3.0" RESULT=FAIL')
 
+    def test_skipped_fbo_checks_do_not_override_the_app_result(self):
+        for status in ('PASS', 'FAIL'):
+            with self.subTest(status=status):
+                line = (f'GL_MATRIX requested="ES 1.1" got="OpenGL ES-CM 1.1" RESULT={status} '
+                        '[texture upload/draw/readback=SKIP] [tess2 star (index type + pixels)=SKIP]')
+                self.assertEqual(passed(line, 'ES 1.1'), status == 'PASS')
+
 
 if __name__ == '__main__':
     unittest.main()

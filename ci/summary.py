@@ -25,11 +25,19 @@ def notes(case):
             return 'Simulator boot / data migration timed out; app tests did not start.'
         return detail[:220] or 'No diagnostic detail.'
     failed = re.findall(r'\[([^\]]+)=FAIL\]', detail)
+    skipped = re.findall(r'\[([^\]]+)=SKIP\]', detail)
     if failed:
-        return 'Failed checks: ' + '; '.join(failed)
-    if case['status'] == 'PASS':
-        return 'All applicable rendering checks passed.'
-    return 'App result or actual context did not satisfy the requested API.'
+        result = 'Failed checks: ' + '; '.join(failed)
+    elif case['status'] == 'PASS':
+        result = 'All applicable rendering checks passed.'
+    else:
+        result = 'App result or actual context did not satisfy the requested API.'
+    if skipped:
+        result += ' Skipped checks: ' + '; '.join(skipped) + '.'
+        reason = re.search(r'SKIP_REASON="([^"]+)"', detail)
+        if reason:
+            result += ' ' + reason.group(1)
+    return result
 
 
 def actual_context(detail):

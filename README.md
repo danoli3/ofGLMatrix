@@ -130,6 +130,12 @@ explicitly reported as **SKIP**, with capable-device testing still required;
 skips are never counted as passes. Emulator/software-renderer checks do not
 replace testing on physical GPUs.
 
+On Android ES 1.1 emulators, OF disables FBOs because of an emulator driver
+limitation. The FBO readback, combined smoke test, and dependent star pixel check
+report **SKIP** with that reason. These checks still run on physical Android
+devices and ES 2.0+ emulators. Other checks, including GL errors, can still fail
+the ES 1.1 case; skipped checks are listed in the summary tables.
+
 The WebGL 1 job uses a WebGL 2-capable binary with WebGL 2 disabled in Chrome,
 as documented by the app, and verifies that the actual context is WebGL 1.
 Upstream currently references ES3 framebuffer symbols even when built with its

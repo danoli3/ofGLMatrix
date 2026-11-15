@@ -11,7 +11,7 @@ class GLMatrixCore {
 public:
 	struct Check {
 		std::string name;
-		std::string status; // PASS / FAIL / n/a
+		std::string status; // PASS / FAIL / SKIP / n/a
 		std::string detail;
 	};
 
@@ -37,10 +37,18 @@ public:
 		ofMajor = r ? r->getGLVersionMajor() : 0;
 		ofMinor = r ? r->getGLVersionMinor() : 0;
 		rendererName = ofIsGLProgrammableRenderer() ? "ofGLProgrammableRenderer" : "ofGLRenderer (fixed)";
+#ifdef TARGET_ANDROID
+		// Match OF's ES 1 emulator restriction; real devices and ES 2+ still test FBOs.
+		skipFboChecks = !ofIsGLProgrammableRenderer() && glRenderer.find("Android Emulator") != std::string::npos;
+#endif
 
 		traceGL("glGetString");
 		logFBState("setup before FBOs");
-		smoke.allocate();
+		if (skipFboChecks) {
+			checks.push_back({"smoke: indexed VBO + tess2 path + FBO readback", "SKIP", fboSkipReason()});
+		} else {
+			smoke.allocate();
+		}
 		traceGL("smoke.allocate");
 		logFBState("after smoke.allocate");
 		runResourceChecks();
@@ -64,7 +72,7 @@ public:
 		traceGL("drawGraphicsExample");
 
 		ofPushStyle();
-		smoke.drawFrame(); // FBO top-left, tessellated star at (180,160)
+		if (!skipFboChecks) smoke.drawFrame(); // FBO top-left, tessellated star at (180,160)
 		ofPopStyle();
 		traceGL("smoke.drawFrame");
 		if (frame < 2) logFBState("after smoke.drawFrame");
@@ -95,10 +103,14 @@ public:
 		std::string line = "GL_MATRIX requested=\"" + requested + "\" got=\"" + glVersion + "\" glsl=\"" + glsl
 			+ "\" renderer=\"" + rendererName + "\" device=\"" + glRenderer + "\" RESULT=" + (allPassed() ? "PASS" : "FAIL");
 		for (auto & c : checks) line += " [" + c.name + "=" + c.status + "]";
+		if (skipFboChecks) line += " SKIP_REASON=\"" + fboSkipReason() + "\"";
 		return line;
 	}
 
 private:
+	static std::string fboSkipReason() {
+		return "OF disables FBOs on Android ES 1.1 emulators due to a driver limitation; test on a physical device.";
+	}
 
 	// one-off probe of renderer / texture calls, each followed by glGetError
 	void probeGL() {
@@ -183,7 +195,9 @@ private:
 		}
 
 		// 2. texture upload -> draw into FBO -> readback
-		{
+		if (skipFboChecks) {
+			checks.push_back({"texture upload/draw/readback", "SKIP", fboSkipReason()});
+		} else {
 			Check c{"texture upload/draw/readback", "FAIL", ""};
 			ofPixels px;
 			px.allocate(4, 4, OF_PIXELS_RGBA);
@@ -326,7 +340,9 @@ private:
 
 		// the smoke test's tessellated 6-point star (drawn at 180,160): its left
 		// arm is only filled when the tess2 index type matches ofIndexType
-		{
+		if (skipFboChecks) {
+			checks.push_back({"tess2 star (index type + pixels)", "SKIP", fboSkipReason()});
+		} else {
 			Check t{"tess2 star (index type + pixels)", "FAIL", ""};
 			ofPath star;
 			star.setFilled(true);
@@ -371,7 +387,7 @@ private:
 		finalized = true;
 		ofLogNotice("glMatrix") << resultLine();
 		for (auto & c : checks) {
-			if (c.status == "FAIL") ofLogNotice("glMatrix") << "GL_MATRIX_DETAIL " << c.name << ": " << c.detail;
+			if (c.status == "FAIL" || c.status == "SKIP") ofLogNotice("glMatrix") << "GL_MATRIX_DETAIL " << c.name << ": " << c.detail;
 		}
 	}
 
@@ -453,5 +469,6 @@ private:
 	float counter = 0;
 	int frame = 0;
 	bool smokeRecorded = false;
+	bool skipFboChecks = false;
 	bool finalized = false;
 };
