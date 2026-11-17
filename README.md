@@ -108,11 +108,16 @@ excluded from version control.
 
 ## Continuous integration
 
-[Graphics against OF master](../../actions/workflows/graphics.yml) runs on pushes,
+[Graphics against openFrameworks](../../actions/workflows/graphics.yml) runs on pushes,
 pull requests, manual dispatch, and weekly. Every matrix job checks out the same
 resolved commit of `openframeworks/openFrameworks` **master**, builds OF from
 source, and uses upstream's dependency downloads. The OF commit SHA is recorded
 in the job summary and artifacts.
+
+Manual runs accept an `of_ref` branch, tag, or commit (default `master`). Release
+tags such as `0.12.2-RC1` select the matching libraries through OF's download
+scripts (`v12.2.0` for RC1); branch and commit runs use the latest libraries.
+The selected ref and resolved commit are recorded in the summaries.
 
 | Job | Coverage |
 | --- | --- |

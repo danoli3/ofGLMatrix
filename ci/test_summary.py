@@ -4,6 +4,15 @@ from simulator import select_device
 
 
 class Summaries(unittest.TestCase):
+    def test_release_summary_names_selected_ref_and_recognizes_build_step(self):
+        jobs = [dict(name='Linux', status='completed', conclusion='success',
+                     steps=[dict(name='Build openFrameworks and the app', conclusion='success')])]
+        report = make_report('Linux', 'linux', 'success', 'success',
+                             dict(cases=[dict(case='GL 3.3', status='PASS', detail='Checks passed')]))
+        markdown = aggregate([report], jobs, 'a' * 40, '0.12.2-RC1')
+        self.assertIn('openFrameworks 0.12.2-RC1 `aaaaaaaaaaaa`', markdown)
+        self.assertIn('| Linux | PASS | PASS | SUCCESS |', markdown)
+
     def test_skipped_subchecks_remain_visible_and_do_not_hide_gl_errors(self):
         for status, gl_status in [('PASS', 'PASS'), ('FAIL', 'FAIL')]:
             with self.subTest(status=status):

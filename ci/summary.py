@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 import re
 
+BUILD_STEPS = ('Build openFrameworks and the app', 'Build OF master and the app')
+
 
 def cell(value):
     return html.escape(str(value), quote=False).replace('|', '&#124;').replace('\r', '').replace('\n', '<br>')
@@ -79,6 +81,7 @@ def make_report(label, platform, build, runtime, data, abi='', webgl='', sha='')
     elif runtime != 'success' and not any(case['status'] == 'FAIL' for case in cases):
         error = 'Runtime step failed after producing app results; see the step logs.'
     return dict(job=label, platform=platform, abi=abi, webgl=webgl, openFrameworks=sha,
+                openFrameworks_ref=os.environ.get('OF_REF', 'master'),
                 build=build_status, build_only=build_only, runtime_step=runtime,
                 error=error, cases=cases, context=data.get('context'))
 
@@ -112,6 +115,8 @@ def counts(report):
 
 def job_markdown(report):
     text = f"## {cell(report['job'])}\n\n"
+    if report.get('openFrameworks'):
+        text += f"openFrameworks {cell(report.get('openFrameworks_ref', 'master'))} at `{report['openFrameworks'][:12]}`.\n\n"
     text += table(['Build', 'Runtime', 'Summary'], [[report['build'], runtime_status(report), counts(report)]])
     text += '\n' + table(['Requested API', 'Actual context', 'Result', 'Details'],
                          [[case['case'], actual_context(case.get('detail', '')), case['status'], notes(case)]
@@ -124,12 +129,12 @@ def job_markdown(report):
     return text
 
 
-def aggregate(reports, jobs, sha):
+def aggregate(reports, jobs, sha, ref='master'):
     by_name = {report['job']: report for report in reports}
     rows = []
     cases = []
     for job in jobs:
-        if not any(step['name'] == 'Build OF master and the app' for step in job.get('steps', [])):
+        if not any(step['name'] in BUILD_STEPS for step in job.get('steps', [])):
             continue
         report = by_name.get(job['name'])
         if report:
@@ -137,13 +142,13 @@ def aggregate(reports, jobs, sha):
                          (job.get('conclusion') or job['status']).upper(), counts(report)])
             cases.extend([[job['name'], case['case'], case['status'], notes(case)] for case in report['cases']])
         else:
-            build = next(step.get('conclusion') for step in job['steps'] if step['name'] == 'Build OF master and the app')
+            build = next(step.get('conclusion') for step in job['steps'] if step['name'] in BUILD_STEPS)
             rows.append([job['name'], {'success': 'PASS', 'failure': 'FAIL'}.get(build, 'NOT RUN'),
                          'UNKNOWN', (job.get('conclusion') or job['status']).upper(),
                          'Summary report unavailable. See job logs.'])
     text = '## Graphics matrix results\n\n'
     if sha:
-        text += f'Tested [openFrameworks master `{sha[:12]}`](https://github.com/openframeworks/openFrameworks/commit/{sha}).\n\n'
+        text += f'Tested [openFrameworks {cell(ref)} `{sha[:12]}`](https://github.com/openframeworks/openFrameworks/commit/{sha}).\n\n'
     text += table(['Job', 'Build', 'Runtime', 'Job status', 'Summary'], sorted(rows))
     text += '\n### API test results\n\n' + table(['Job', 'API', 'Result', 'Details'], sorted(cases))
     text += '\n**BUILD ONLY** = compiled without runtime coverage. **SKIP** = unsupported runner capability. **NOT RUN** = tests did not execute. **ERROR** = test infrastructure failed.\n'
@@ -179,7 +184,7 @@ def main():
         emit(job_markdown(report))
     else:
         reports = [json.loads(path.read_text()) for path in args.reports.rglob('report.json')]
-        emit(aggregate(reports, json.loads(args.jobs.read_text()), os.environ.get('OF_SHA', '')))
+        emit(aggregate(reports, json.loads(args.jobs.read_text()), os.environ.get('OF_SHA', ''), os.environ.get('OF_REF', 'master')))
 
 
 if __name__ == '__main__':
